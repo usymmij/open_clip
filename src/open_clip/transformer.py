@@ -11,6 +11,8 @@ from torch.utils.checkpoint import checkpoint
 from .utils import to_2tuple
 from .pos_embed import get_2d_sincos_pos_embed
 
+from .projection import FeatureToEmbeddingProjection
+
 
 class LayerNormFp32(nn.LayerNorm):
     """Subclass torch's LayerNorm to handle fp16 (by casting to float32 and back)."""
@@ -539,7 +541,7 @@ class VisionTransformer(nn.Module):
             pooled, tokens = self._global_pool(x)
 
         if self.proj is not None:
-            pooled = pooled @ self.proj
+            pooled = FeatureToEmbeddingProjection.apply(pooled, self.proj)
 
         if self.output_tokens:
             return pooled, tokens

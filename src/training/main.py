@@ -485,6 +485,7 @@ def main(args):
             logging.info('Final remote sync successful.')
         else:
             logging.info('Final remote sync failed.')
+    return model
     
 
 def copy_codebase(args):
