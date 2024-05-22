@@ -6,6 +6,7 @@
 - [access model from main()](access-model-from-main())
 - [feature projection](feature-projection)
 - [use feature projection](use-feature-projection)
+- [randomize img projection layer](randomize-img-final)
 # Changes
 
 ## commit 
@@ -13,13 +14,3 @@
 ### access-model-from-main()
 > `src/training/main.py`
 - training.main() now returns the model as its return value
-
-### feature projection
-> `src/open_clip/projection.py`
-- created the FeatureToEmbedding class
- 
-### use feature projection
->`src/open_clip/transformer.py`
-- import FeatureToEmbedding, and replace the projection in the VisionTransformer class
-
-

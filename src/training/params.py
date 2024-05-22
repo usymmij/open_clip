@@ -452,6 +452,11 @@ def parse_args(args):
         action="store_true",
         help='Use SigLip (sigmoid) loss.'
     )
+    parser.add_argument(
+        "--pinv-improj",
+        default=False,
+        help='use pseudoinverse for projections '
+    )
 
     args = parser.parse_args(args)
 

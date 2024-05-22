@@ -317,6 +317,15 @@ def create_model(
         force_preprocess_cfg['size'] = model.visual.image_size
     set_model_preprocess_cfg(model, merge_preprocess_dict(preprocess_cfg, force_preprocess_cfg))
 
+    # if arg rand_img_final
+    with torch.no_grad():
+        for name, param in list(model.named_parameters()):
+            if 'visual.proj' == name:
+                # inplace overwrite
+                size = param.size()
+                average = param.mean().to(device)
+                param.copy_(average * torch.randn(size).to(device))
+
     return model
 
 

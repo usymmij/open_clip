@@ -160,7 +160,7 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                     losses["loss"] = total_loss
 
                 backward(total_loss, scaler)
-
+        
         if scaler is not None:
             if args.horovod:
                 optimizer.synchronize()

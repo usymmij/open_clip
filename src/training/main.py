@@ -313,7 +313,27 @@ def main(args):
 
         named_parameters = list(model.named_parameters())
         gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
-        rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
+        rest_params = [p for n,p in named_parameters if include(n,p) and p.requires_grad] 
+        #rest_params = []
+        #proj_params = []
+        #for n,p in named_parameters:
+        #    if include(n,p) and p.requires_grad:
+        #    # pseudoinverse projection 
+        #        if args.pinv_improj and n == "visual.proj":
+        #            proj_params.append(p)
+        #        rest_params.append(p)
+        #
+        #adamW_params = [
+        #        [
+        #            {"params": gain_or_bias_params, "weight_decay": 0.},
+        #            {"params": rest_params, "weight_decay": args.wd},
+        #        ],
+        #        {
+        #            "lr": args.lr,
+        #            "betas":(args.beta1, args.beta2),
+        #            "eps":args.eps,
+        #        }
+        #    ]
 
         optimizer = optim.AdamW(
             [
@@ -324,6 +344,7 @@ def main(args):
             betas=(args.beta1, args.beta2),
             eps=args.eps,
         )
+
         if args.horovod:
             optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())
             hvd.broadcast_parameters(model.state_dict(), root_rank=0)
