@@ -22,6 +22,7 @@ from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionT
     text_global_pool
 from .utils import to_2tuple
 
+from .pinv_recomputation import PseudoInverseProjectionRecomputation as PInvRcomp
 
 @dataclass
 class CLIPVisionCfg:
@@ -230,11 +231,16 @@ class CLIP(nn.Module):
             init_logit_bias: Optional[float] = None,
             cast_dtype: Optional[torch.dtype] = None,
             output_dict: bool = False,
+            pinv_improj: bool = False,
     ):
         super().__init__()
         self.output_dict = output_dict
 
         self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype)
+
+        self.pinv_recomp = None
+        if pinv_improj:
+            self.pinv_recomp = PInvRcomp(self.visual.proj, self.visual.projection_layer)
 
         text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype)
         self.transformer = text.transformer
@@ -302,6 +308,9 @@ class CLIP(nn.Module):
         image_features = self.encode_image(image, normalize=True) if image is not None else None
         text_features = self.encode_text(text, normalize=True) if text is not None else None
 
+        if self.pinv_recomp is not None:
+            self.pinv_recomp.update_error(text_features)
+
         if self.output_dict:
             out_dict = {
                 "image_features": image_features,
@@ -315,6 +324,10 @@ class CLIP(nn.Module):
         if self.logit_bias is not None:
             return image_features, text_features, self.logit_scale.exp(), self.logit_bias
         return image_features, text_features, self.logit_scale.exp()
+
+    def recompute(self):
+        if self.pinv_recomp is not None:
+            self.pinv_recomp.recompute()
 
 
 class CustomTextCLIP(nn.Module):
@@ -451,6 +464,7 @@ def build_model_from_openai_state_dict(
         state_dict: dict,
         quick_gelu=True,
         cast_dtype=torch.float16,
+        pinv_improj: bool = False,
 ):
     vit = "visual.proj" in state_dict
 
@@ -497,6 +511,7 @@ def build_model_from_openai_state_dict(
         text_cfg=text_cfg,
         quick_gelu=quick_gelu,  # OpenAI models were trained with QuickGELU
         cast_dtype=cast_dtype,
+        pinv_improj=pinv_improj,
     )
 
     for key in ["input_resolution", "context_length", "vocab_size"]:

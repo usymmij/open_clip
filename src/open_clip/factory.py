@@ -178,6 +178,7 @@ def create_model(
         cache_dir: Optional[str] = None,
         output_dict: Optional[bool] = None,
         require_pretrained: bool = False,
+        pinv_improj: bool = False,
         **model_kwargs,
 ):
     force_preprocess_cfg = force_preprocess_cfg or {}
@@ -205,9 +206,11 @@ def create_model(
             precision=precision,
             device=device,
             cache_dir=cache_dir,
+            pinv_improj=pinv_improj,
         )
     else:
         model_cfg = model_cfg or get_model_config(model_name)
+
         if model_cfg is not None:
             logging.info(f'Loaded {model_name} model config.')
         else:
@@ -385,8 +388,10 @@ def create_model_and_transforms(
         pretrained_hf: bool = True,
         cache_dir: Optional[str] = None,
         output_dict: Optional[bool] = None,
+        pinv_improj: bool = False,
         **model_kwargs,
 ):
+    print('hi')
     force_preprocess_cfg = merge_preprocess_kwargs(
         {}, mean=image_mean, std=image_std, interpolation=image_interpolation, resize_mode=image_resize_mode)
 
@@ -405,6 +410,7 @@ def create_model_and_transforms(
         pretrained_hf=pretrained_hf,
         cache_dir=cache_dir,
         output_dict=output_dict,
+        pinv_improj=pinv_improj,
         **model_kwargs,
     )
 

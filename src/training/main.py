@@ -237,6 +237,7 @@ def main(args):
         aug_cfg=args.aug_cfg,
         pretrained_image=args.pretrained_image,
         output_dict=True,
+        pinv_improj=args.pinv_improj,
         **model_kwargs,
     )
     if args.distill:

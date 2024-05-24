@@ -1,5 +1,8 @@
 import torch
 from torch import nn
+from torch.nn.functional import normalize as l2_norm
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class PseudoInverseProjectionRecomputation:
     """
@@ -11,59 +14,71 @@ class PseudoInverseProjectionRecomputation:
     where X^+ is the pseudoinverse of X
     """
 
-    def __init__(self, weight, layer, lr=1e-3):
+    def __init__(self, param, layer, lr=1e-3):
         """initialize recomputation
 
         Parameters:
-        tensor: the tensor to be biased upon iteration
+        param: the tensor to be biased upon iteration
+        layer: the layer to attach the hooks
         """
-        assert( isinstance(weight, nn.Parameter) )
-        assert( isinstance(layer, nn.Module) )
-        self.weight = weight
+        assert( isinstance(param, nn.Parameter) )
+        assert( isinstance(layer, ProjectionLayer) )
+        self.weight = param 
         self.lr = lr
 
         self.input = None
         self.output= None
+        # hook includes batch size!
         def hook(module, args, output):
-            self.input = args[0]
-            self.output = output
+            self.input = l2_norm(args[0], dim=-1)
+            self.output = l2_norm(output, dim=-1)
         layer.register_forward_hook(hook)
 
+        self.identity_pair_constant = None
 
     def update_error(self, target):
-        self.out_error = target - self.output
+        if self.identity_pair_constant is None or not self.identity_pair_constant.size() == self.input.size():
+            self.identity_pair_constant = (2*torch.eye(target.size()[0], target.size()[1]) - 1).to(device)
+
+        # shapes = (batch_size, feature_dims) 
+        self.out_error = l2_norm(target, dim=-1) - self.output
+        self.out_error *= self.identity_pair_constant
 
     def recompute(self):
         # i^+ @ e_o
-        dW = torch.linalg.lstsq(self.input, self.out_error).solution
+        dW = torch.linalg.lstsq(self.input.float(), self.out_error).solution
         dW *= self.lr
 
         with torch.no_grad():
             self.weight += dW
 
 class ProjectionLayer(torch.nn.Module):
-    def __init__(self, weight):
+    def __init__(self):
         super().__init__()
-        self.weight = weight
-    
-    def forward(self, x):
-        return x @ self.weight
+
+    def forward(self, x, weight):
+        return x @ weight
 
 if __name__=="__main__":
-    a = torch.tensor([[1.0,2.0,0], [0,1.0,0], [0,0,1.0]])
-    a = nn.Parameter(a)
-    l = ProjectionLayer(a)
+    w = torch.tensor([[0.5,0.0,0], [0,1.0,0], [0,0,1.0]])
+    w = nn.Parameter(w)
+    l = ProjectionLayer(w)
     
-    p=PseudoInverseProjectionRecomputation(a,l, lr=1)
+    p=PseudoInverseProjectionRecomputation(w,l, lr=1)
     print('init')
     
     x = torch.tensor([[1.0, 0.0, 2.0],[2.0,3.0,1.0]])
     y = torch.tensor([[1.0, 0.0, 2.0],[2.0,3.0,1.0]])
-    y_p = l(x)
+    print('target')
+    print(l2_norm(y, dim=-1))
+    y_ = l(x)
+    print('\norig output')
+    print(l2_norm(y_, dim=-1))
 
     p.update_error(y)
-    print(a)
     p.recompute()
-    print(a)
-    
+
+    y_ = l(x)
+    print('\nnew output')
+    print(l2_norm(y_, dim=-1))
 

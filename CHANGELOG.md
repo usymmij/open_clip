@@ -14,3 +14,12 @@
 ### access-model-from-main()
 > `src/training/main.py`
 - training.main() now returns the model as its return value
+
+### create pinv_projection.py
+> `src/main/pinv_projection.py`
+
+### use pinv_projection.py
+> `src/training/model.py`
+
+> `src/open_clip/transformer.py`
+
